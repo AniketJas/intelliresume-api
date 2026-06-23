@@ -2,16 +2,22 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import morgan from "morgan";
+import cookieParser from "cookie-parser";
 
 import connectDB from "./configs/db.js";
 
 import userRoutes from "./routes/user.routes.js";
+import resumeRoutes from "./routes/resume.routes.js";
 
 dotenv.config({ quiet: true });
 const app = express();
 
 app.use(express.json());
-app.use(cors());
+app.use(cookieParser());
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true,
+}));
 
 const PORT = process.env.PORT || 9000;
 
@@ -23,7 +29,8 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/users", userRoutes);
+app.use("/api/resume", resumeRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server is running: http://localhost:${PORT}`);
-})
+});
