@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 
 import User from "../models/user.model.js";
+import jwt from "jsonwebtoken";
 
 export const register = async (req, res) => {
   try {
@@ -16,9 +17,9 @@ export const register = async (req, res) => {
 
     await newUser.save();
 
-    res.status(201).json({ success: 1, message: "User registered successfully" });
+    return res.status(201).json({ success: 1, message: "User registered successfully" });
   } catch (error) {
-    res.status(500).json({ success: 0, message: "Server error", error: error.message });
+    return res.status(500).json({ success: 0, message: "Server error", error: error.message });
   }
 };
 
@@ -27,26 +28,63 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
+
     if (!user) {
-      return res.status(400).json({ success: 0, message: "Invalid email or password" });
+      return res.status(400).json({
+        success: 0,
+        message: "Invalid email or password",
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
+
     if (!isMatch) {
-      return res.status(400).json({ success: 0, message: "Invalid email or password" });
+      return res.status(400).json({
+        success: 0,
+        message: "Invalid email or password",
+      });
     }
 
-    res.status(200).json({ success: 1, message: "Login successful", data: { id: user._id, name: user.name, email: user.email } });
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 1000, // 1 hour
+    });
+
+    return res.status(200).json({
+      success: 1,
+      message: "Login successful",
+      token, // Optional: remove if using only cookies
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+    });
   } catch (error) {
-    res.status(500).json({ success: 0, message: "Server error", error: error.message });
+    console.error("Login Error:", error);
+
+    return res.status(500).json({
+      success: 0,
+      message: "Server error",
+      error: error.message,
+    });
   }
 };
 
 export const logout = async (req, res) => {
   try {
     // In a real application, you would handle token invalidation or session destruction here.
-    res.status(200).json({ success: 1, message: "Logout successful" });
+    res.clearCookie("token");
+    return res.status(200).json({ success: 1, message: "Logout successful" });
   } catch (error) {
-    res.status(500).json({ success: 0, message: "Server error", error: error.message });
+    return res.status(500).json({ success: 0, message: "Server error", error: error.message });
   }
 };
