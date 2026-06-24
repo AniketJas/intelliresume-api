@@ -7,6 +7,5 @@ const router = express.Router();
 
 router.post('/analyze', authenticateToken, handleUploadMiddleware, analyzeResume);
 router.get('/analyses', authenticateToken, getUserAnalyses);
-router.get('/download/:id', authenticateToken, downloadResume);
 
 export default router;

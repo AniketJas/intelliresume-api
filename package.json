@@ -22,7 +22,8 @@
     "jsonwebtoken": "^9.0.3",
     "mammoth": "^1.12.0",
     "mongoose": "^9.7.1",
-    "multer": "^2.2.0"
+    "multer": "^2.2.0",
+    "pdf-parse": "^2.4.5"
   },
   "devDependencies": {
     "morgan": "^1.11.0",
