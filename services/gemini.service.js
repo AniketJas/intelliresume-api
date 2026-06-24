@@ -1,11 +1,7 @@
 import ai from '../configs/gemini.js';
 
-// Helper to pause execution for a given duration
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * Helper to retry an asynchronous function if it encounters transient API errors (like 503 or 429).
- */
 const callWithRetry = async (fn, retries = 3, delay = 1500) => {
   for (let i = 0; i < retries; i++) {
     const attempt = i + 1;
@@ -24,7 +20,7 @@ const callWithRetry = async (fn, retries = 3, delay = 1500) => {
       if (isTransient && i < retries - 1) {
         console.warn(`Gemini API transient error (attempt ${i + 1}/${retries}). Retrying in ${delay}ms...`);
         await wait(delay);
-        delay *= 2; // Exponential backoff
+        delay *= 2;
         continue;
       }
       throw error;
@@ -32,28 +28,14 @@ const callWithRetry = async (fn, retries = 3, delay = 1500) => {
   }
 };
 
-
-/**
- * Analyzes raw resume text directly and provides detailed ATS scoring and feedback.
- * @param {string} resumeText - The extracted text from the resume.
- * @returns {Promise<Object>} The resume analysis result.
- */
-export const analyzeResume = async (resumeText) => {
-  if (!resumeText || !resumeText.trim()) {
-    throw new Error("No resume text provided for analysis.");
-  }
-
-  const currentYear = new Date().getFullYear();
-
-  const prompt = `
+const SYSTEM_PROMPT = `
 You are a Senior Technical Recruiter, ATS Expert, and Engineering Hiring Manager.
 
-Current Year: ${currentYear}
+Current Year: {CURRENT_YEAR}
 
 You are receiving RAW TEXT extracted from a PDF or DOCX resume.
 
 IMPORTANT:
-
 - Resume formatting may be lost during extraction.
 - Do NOT evaluate fonts, colors, spacing, layout, margins, page design, or clickable links.
 - Do NOT assume dates are incorrect unless they are logically impossible.
@@ -64,7 +46,6 @@ IMPORTANT:
 - Evaluate only the actual resume content.
 
 Analyze the resume based on:
-
 1. Technical skills
 2. Work experience
 3. Project quality
@@ -76,7 +57,6 @@ Analyze the resume based on:
 9. Resume impact
 
 Scoring Guidelines:
-
 - 90-100 = Exceptional candidate
 - 80-89 = Strong candidate
 - 70-79 = Good candidate
@@ -84,7 +64,6 @@ Scoring Guidelines:
 - Below 60 = Significant improvement required
 
 Rules:
-
 - Strengths should highlight genuine advantages.
 - Weaknesses should only include issues that materially reduce interview chances.
 - If no major weakness exists, return an empty array.
@@ -94,36 +73,25 @@ Rules:
 - Avoid generic recruiter advice.
 
 Resume Text:
-
 """
-${resumeText}
+{RESUME_TEXT}
 """
 
 Return ONLY valid JSON matching this schema:
-
 {
   "overallScore": 0,
   "atsScore": 0,
-
   "strengths": [],
-
   "weaknesses": [],
-
   "missingSkills": [],
-
   "improvements": [],
-
   "recommendedRoles": [],
-
   "careerLevel": "",
-
   "marketCompetitiveness": "",
-
   "recruiterSummary": ""
 }
 
 Field Guidelines:
-
 careerLevel:
 - Entry Level
 - Junior
@@ -144,28 +112,30 @@ recruiterSummary:
 - Mention biggest opportunity for improvement
 `;
 
-  const makeApiCall = () => {
-    console.log("GEMINI REQUEST STARTED");
-    return ai.models.generateContent({
-      model: "gemini-2.5-flash-lite",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
-  };
+export const analyzeResume = async (resumeText) => {
+  if (!resumeText || !resumeText.trim()) {
+    throw new Error("No resume text provided for analysis.");
+  }
+
+  const prompt = SYSTEM_PROMPT
+    .replace('{CURRENT_YEAR}', new Date().getFullYear())
+    .replace('{RESUME_TEXT}', resumeText);
 
   try {
-    const response = await callWithRetry(makeApiCall);
+    const response = await callWithRetry(() => {
+      console.log("GEMINI REQUEST STARTED");
+      return ai.models.generateContent({
+        model: "gemini-2.5-flash-lite",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+        },
+      });
+    });
 
-    const analysisJson = JSON.parse(response.text);
-
-    return analysisJson;
+    return JSON.parse(response.text);
   } catch (error) {
     console.error("Error in analyzeResume service:", error);
-
-    throw new Error(
-      `Failed to analyze resume with Gemini: ${error.message}`
-    );
+    throw new Error(`Failed to analyze resume with Gemini: ${error.message}`);
   }
 };
