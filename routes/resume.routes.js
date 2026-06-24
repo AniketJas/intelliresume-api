@@ -1,7 +1,7 @@
 import express from 'express';
 import { authenticateToken } from '../middlewares/jwt.js';
 import { handleUploadMiddleware } from '../middlewares/multer.js';
-import { analyzeResume, getUserAnalyses, downloadResume } from '../controllers/resume.controller.js';
+import { analyzeResume, getUserAnalyses } from '../controllers/resume.controller.js';
 
 const router = express.Router();
 
