@@ -5,6 +5,7 @@ import morgan from "morgan";
 import cookieParser from "cookie-parser";
 
 import connectDB from "./configs/db.js";
+import job from './configs/cron.js';
 import { rateLimiter } from "./middlewares/rateLimiter.js";
 import userRoutes from "./routes/user.routes.js";
 import resumeRoutes from "./routes/resume.routes.js";
@@ -16,6 +17,10 @@ app.set("trust proxy", 1);
 
 app.use(express.json());
 app.use(cookieParser());
+
+if (process.env.NODE_ENV === 'production') {
+  job.start();
+}
 
 app.use(cors({
   origin: "http://localhost:5173",
