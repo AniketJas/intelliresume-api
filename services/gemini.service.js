@@ -125,7 +125,7 @@ export const analyzeResume = async (resumeText) => {
     const response = await callWithRetry(() => {
       console.log("GEMINI REQUEST STARTED");
       return ai.models.generateContent({
-        model: "gemini-2.5-flash-lite",
+        model: "gemini-2.5-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
